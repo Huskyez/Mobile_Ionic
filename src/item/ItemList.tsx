@@ -13,16 +13,25 @@ import {
     IonList, IonLoading,
     IonPage,
     IonTitle,
-    IonToolbar
+    IonToolbar,
+    IonLabel,
+    IonButton,
+    IonButtons
 } from "@ionic/react";
 import {add} from "ionicons/icons";
+import {useNetwork} from "../utils/useNetwork";
+import {AuthContext} from "../auth/AuthProvider";
+import {saveToken} from "../auth/TokenStorage";
 
 
 const log = getLogger('ItemList');
 
 const ItemList : React.FC<RouteComponentProps> = ({history}) => {
 
+    const { networkStatus } = useNetwork()
     const { items, fetching, fetchingError } = useContext(ItemContext);
+
+    const { logout } = useContext(AuthContext)
 
     log("render ItemList")
     return (
@@ -30,14 +39,22 @@ const ItemList : React.FC<RouteComponentProps> = ({history}) => {
             <IonHeader>
                 <IonToolbar>
                     <IonTitle>I hate js</IonTitle>
+                    <IonLabel>
+                        Network status: { JSON.stringify(networkStatus) }
+                    </IonLabel>
+                    <IonButtons slot="end">
+                        <IonButton onClick={() => {logout && logout()}}>
+                            Logout
+                        </IonButton>
+                    </IonButtons>
                 </IonToolbar>
             </IonHeader>
             <IonContent>
                 <IonLoading isOpen={fetching} message={"Fetching Items"}/>
                 {items && (
                     <IonList>
-                        {items.map(({id, text, date, version}) =>
-                            <Item key={id} id={id} date={date} version={version} text={text} onEdit={id => history.push(`/item/${id}`)}/>)}
+                        {items.map(({_id, text, date, version}) =>
+                            <Item key={_id} _id={_id} date={date} version={version} text={text} onEdit={id => history.push(`/item/${id}`)}/>)}
                     </IonList>)}
                 {fetchingError && (
                     <div>{fetchingError.message || "Failed to fetch items"}</div>

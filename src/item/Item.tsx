@@ -8,7 +8,7 @@ interface ItemPropsComponent extends ItemProps {
 
 export const Item: React.FC<ItemPropsComponent> = (item: ItemPropsComponent) => {
     return(
-        <IonItem onClick={() => item.onEdit(item.id)}>
+        <IonItem onClick={() => item.onEdit(item._id)}>
             <IonLabel>{item.text}</IonLabel>
         </IonItem>
     )

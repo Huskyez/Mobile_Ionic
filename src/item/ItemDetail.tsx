@@ -24,7 +24,7 @@ interface ItemDetailProps extends RouteComponentProps<{id? : string}> {}
 const ItemDetail: React.FC<ItemDetailProps> = ({history, match}) => {
 
     const {items, saving, savingError, saveFunc } = useContext(ItemContext);
-    log(`${saveFunc}`);
+    // log(`${saveFunc}`);
 
     const [text, setText] = useState('');
     const [item, setItem] = useState<ItemProps>();
@@ -34,7 +34,7 @@ const ItemDetail: React.FC<ItemDetailProps> = ({history, match}) => {
         log("useEffect");
 
         const routeId = match.params.id || '';
-        const item = items?.find(it => it.id === routeId);
+        const item = items?.find(it => it._id === routeId);
         setItem(item);
         if (item) {
             setText(item.text);
@@ -43,9 +43,9 @@ const ItemDetail: React.FC<ItemDetailProps> = ({history, match}) => {
         [match.params.id, items]
     );
     const handleSave = () => {
-        const editedItem = item ? { id: item.id, text: text, date: item.date, version: item.version } : { id: undefined, text: text, date: new Date(), version: 0 }
-        log(`handleSave editedItem: ${editedItem.id} - ${editedItem.text}`);
-        log(`handleSave saveFunc: ${saveFunc}`);
+        const editedItem = item ? { _id: item._id, text: text, date: item.date, version: item.version } : { _id: undefined, text: text, date: new Date(), version: 0 }
+        log(`handleSave editedItem: ${editedItem._id} - ${editedItem.text}`);
+        // log(`handleSave saveFunc: ${saveFunc}`);
         saveFunc && saveFunc(editedItem).then(() => history.goBack());
     };
 
@@ -59,7 +59,7 @@ const ItemDetail: React.FC<ItemDetailProps> = ({history, match}) => {
             <IonContent>
 
                 <IonItem>
-                    <IonLabel>ID: {item?.id}</IonLabel>
+                    <IonLabel>ID: {item?._id}</IonLabel>
                 </IonItem>
                 <IonItem>
                     <IonTextarea value={text || ''} onIonChange={t => {setText(t.detail.value || ''); log(`t value - ${t.detail.value}`)}} />

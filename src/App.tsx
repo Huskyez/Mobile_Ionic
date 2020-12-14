@@ -27,19 +27,25 @@ import './theme/variables.css';
 import { ItemProvider } from "./item/ItemProvider";
 import ItemList from "./item/ItemList";
 import ItemDetail from "./item/ItemDetail";
+import {AuthProvider} from "./auth/AuthProvider";
+import {LoginPage} from "./auth/LoginPage";
+import {PrivateRoute} from "./auth/PrivateRoute";
 
 const App: React.FC = () => (
   <IonApp>
-      <ItemProvider>
-          <IonReactRouter>
-              <IonRouterOutlet>
-                  <Route path="/items" component={ItemList} exact={true} />
-                  <Route path="/item" component={ItemDetail} exact={true} />
-                  <Route path="/item/:id" component={ItemDetail} exact={true} />
+      <IonReactRouter>
+          <IonRouterOutlet>
+              <AuthProvider>
+                  <Route path="/login" component={LoginPage} exact={true} />
+                  <ItemProvider>
+                      <PrivateRoute path="/items" component={ItemList} exact={true} />
+                      <PrivateRoute path="/item" component={ItemDetail} exact={true} />
+                      <PrivateRoute path="/item/:id" component={ItemDetail} exact={true} />
+                  </ItemProvider>
                   <Route exact path="/" render={() => <Redirect to="/items" />} />
-              </IonRouterOutlet>
-          </IonReactRouter>
-      </ItemProvider>
+              </AuthProvider>
+          </IonRouterOutlet>
+      </IonReactRouter>
   </IonApp>
 );
 

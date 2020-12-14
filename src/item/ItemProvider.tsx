@@ -1,8 +1,10 @@
 
-import React, {useCallback, useEffect, useReducer} from "react";
-import {createItem, getItems, itemWebSocket, updateItem} from "./api/ItemAPI";
+import React, {useCallback, useContext, useEffect, useReducer} from "react";
+import {createItem, getItems, updateItem} from "./api/ItemAPI";
 import {getLogger} from "../utils/logger";
 import PropTypes from 'prop-types';
+import {AuthContext} from "../auth/AuthProvider";
+import {insertAll, insertItem, findItems, findItem, clearItems} from "./local/ItemStorage";
 
 const log = getLogger('ItemProvider');
 
@@ -45,13 +47,13 @@ const reducer: (state: ItemsState, action: ActionProps) => ItemsState = (state, 
             case FETCH_ITEMS_SUCCEEDED:
                 return { ...state, items: payload.items, fetching: false };
             case FETCH_ITEMS_FAILED:
-                return { ...state, fetchingError: payload.error, fetching: false };
+                return { ...state, items: payload.items, fetchingError: payload.error, fetching: false };
             case SAVE_ITEM_STARTED:
                 return { ...state, savingError: null, saving: true };
             case SAVE_ITEM_SUCCEEDED:
                 const items = [...(state.items || [])];
                 const item = payload.item;
-                const index = items.findIndex(it => it.id === item.id);
+                const index = items.findIndex(it => it._id === item._id);
                 if (index === -1) {
                     items.splice(0, 0, item);
                 } else {
@@ -77,14 +79,16 @@ export const ItemProvider: React.FC<ItemProviderProps> = ({ children }) => {
 
     const { items, fetching, fetchingError, saving, savingError } = state;
 
-    useEffect(getItemsEffect, []);
-    useEffect(wsEffect, []);
+    const { token }  = useContext(AuthContext)
 
-    const saveCallback = useCallback<SaveItemFunc>(saveItemCallback, []);
+    useEffect(getItemsEffect, [token]);
+    // useEffect(wsEffect, []);
+
+    const saveCallback = useCallback<SaveItemFunc>(saveItemCallback, [token]);
 
     const value = { items, fetching, fetchingError, saving, savingError, saveFunc: saveCallback };
 
-    log(`value: ${value.saveFunc}`);
+    // log(`value: ${value.saveFunc}`);
 
     return (
         <ItemContext.Provider value={value}>
@@ -94,8 +98,7 @@ export const ItemProvider: React.FC<ItemProviderProps> = ({ children }) => {
 
     function getItemsEffect() {
         let canceled = false;
-        // fetchItems().then(r => );
-        fetchItems();
+        fetchItems().then()
         return () => {
             canceled = true;
         }
@@ -104,14 +107,18 @@ export const ItemProvider: React.FC<ItemProviderProps> = ({ children }) => {
             try {
                 log('fetchItems started');
                 dispatch({ type: FETCH_ITEMS_STARTED });
-                const items = await getItems();
-                log('fetchItems succeeded');
+                const items = await getItems(token);
+
+                await clearItems()
+                await insertAll(items)
+
+                log(`fetchItems succeeded\n ${items}`);
                 if (!canceled) {
-                    dispatch({ type: FETCH_ITEMS_SUCCEEDED, payload: { items } });
+                    dispatch({ type: FETCH_ITEMS_SUCCEEDED, payload: { items: await findItems() } });
                 }
             } catch (error) {
                 log('fetchItems failed');
-                dispatch({ type: FETCH_ITEMS_FAILED, payload: { error } });
+                dispatch({ type: FETCH_ITEMS_FAILED, payload: { error: error, items: await findItems() } });
             }
         }
     }
@@ -120,7 +127,10 @@ export const ItemProvider: React.FC<ItemProviderProps> = ({ children }) => {
         try {
             log('saveItem started');
             dispatch({ type: SAVE_ITEM_STARTED });
-            const savedItem = await (item.id ? updateItem(item) : createItem(item));
+            const savedItem = await (item._id ? updateItem(item, token) : createItem(item, token));
+
+            await insertItem(savedItem)
+
             log('saveItem succeeded');
             dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item: savedItem } });
         } catch (error) {
@@ -129,23 +139,23 @@ export const ItemProvider: React.FC<ItemProviderProps> = ({ children }) => {
         }
     }
 
-    function wsEffect() {
-        let canceled = false;
-        log('wsEffect - connecting');
-        const closeWebSocket = itemWebSocket(message => {
-            if (canceled) {
-                return;
-            }
-            const { event, payload: { item }} = message;
-            log(`ws message, item ${event}`);
-            if (event === 'created' || event === 'updated') {
-                dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
-            }
-        });
-        return () => {
-            log('wsEffect - disconnecting');
-            canceled = true;
-            closeWebSocket();
-        }
-    }
+    // function wsEffect() {
+    //     let canceled = false;
+    //     log('wsEffect - connecting');
+    //     const closeWebSocket = itemWebSocket(message => {
+    //         if (canceled) {
+    //             return;
+    //         }
+    //         const { event, payload: { item }} = message;
+    //         log(`ws message, item ${event}`);
+    //         if (event === 'created' || event === 'updated') {
+    //             dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
+    //         }
+    //     });
+    //     return () => {
+    //         log('wsEffect - disconnecting');
+    //         canceled = true;
+    //         closeWebSocket();
+    //     }
+    // }
 };
